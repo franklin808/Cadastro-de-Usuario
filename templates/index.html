@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cadastro e Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen flex items-center justify-center p-4">
+    <div class="container mx-auto max-w-md">
+        <!-- Telas -->
+        <div id="register-screen" class="fade-in">
+            <!-- Tela de Cadastro -->
+            <div class="bg-white card rounded-xl p-8">
+                <div class="text-center mb-8">
+                    <i class="fas fa-user-plus text-4xl text-blue-500 mb-4"></i>
+                    <h1 class="text-2xl font-bold text-gray-800">Crie sua conta</h1>
+                    <p class="text-gray-500 mt-2">Preencha os campos abaixo para se cadastrar</p>
+                </div>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                        <input type="text" id="name" required class="w-full pl-3 py-2 rounded-lg border border-gray-300" placeholder="Seu nome">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                        <input type="email" id="email" required class="w-full pl-3 py-2 rounded-lg border border-gray-300" placeholder="seu@email.com">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <input type="password" id="password" required class="w-full pl-3 py-2 rounded-lg border border-gray-300" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg">Cadastrar</button>
+                </form>
+                <div class="mt-6 text-center">
+                    <p class="text-gray-500">Já é cadastrado? <button id="go-to-login" class="text-blue-500 hover:text-blue-600 font-medium">Faça login</button></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="login-screen" class="hidden fade-in">
+            <!-- Tela de Login -->
+            <div class="bg-white card rounded-xl p-8">
+                <div class="text-center mb-8">
+                    <i class="fas fa-sign-in-alt text-4xl text-blue-500 mb-4"></i>
+                    <h1 class="text-2xl font-bold text-gray-800">Bem-vindo de volta</h1>
+                    <p class="text-gray-500 mt-2">Faça login para acessar sua conta</p>
+                </div>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                        <input type="email" id="login-email" required class="w-full pl-3 py-2 rounded-lg border border-gray-300" placeholder="seu@email.com">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <input type="password" id="login-password" required class="w-full pl-3 py-2 rounded-lg border border-gray-300" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg">Entrar</button>
+                </form>
+                <div class="mt-6 text-center">
+                    <p class="text-gray-500">Ainda não tem conta? <button id="go-to-register" class="text-blue-500 hover:text-blue-600 font-medium">Cadastre-se</button></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="welcome-screen" class="hidden fade-in">
+            <!-- Tela de Boas-vindas -->
+            <div class="bg-white card rounded-xl p-8 text-center">
+                <div class="mb-6">
+                    <i class="fas fa-check-circle text-5xl text-green-500"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Olá, <span id="welcome-name" class="text-blue-500">Usuário</span>!</h1>
+                <p class="text-gray-500 mb-6">Você está logado com sucesso em nosso sistema.</p>
+                <button id="logout-btn" class="text-blue-500 hover:text-blue-600 font-medium">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://jlhzbpbazlvxobqfmhci.supabase.co'; // Altere para o seu
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaHpicGJhemx2eG9icWZtaGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxNjAyMTgsImV4cCI6MjA2MjczNjIxOH0.kNjhJHtPZRw0-TBaFLe8pXlnDEHEgJuqzH3OdiZrrRk'; // Altere para o seu
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+        const registerScreen = document.getElementById('register-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const welcomeName = document.getElementById('welcome-name');
+
+        const goToLoginBtn = document.getElementById('go-to-login');
+        const goToRegisterBtn = document.getElementById('go-to-register');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        const registerForm = document.getElementById('register-form');
+        const loginForm = document.getElementById('login-form');
+
+        goToLoginBtn.addEventListener('click', () => {
+            registerScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+
+        goToRegisterBtn.addEventListener('click', () => {
+            loginScreen.classList.add('hidden');
+            registerScreen.classList.remove('hidden');
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            welcomeScreen.classList.add('hidden');
+            registerScreen.classList.remove('hidden');
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  // Tenta logar pra ver se usuário existe e senha bate
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (!signInError) {
+    alert('Este e-mail já está cadastrado. Por favor, faça login.');
+    return;
+  }
+
+  // Tenta cadastrar
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+
+  if (signUpError) {
+    // Detecta se o erro é usuário já cadastrado (bad request / 400 e mensagem)
+    if (signUpError.status === 400 && signUpError.message.toLowerCase().includes('already registered')) {
+      alert('Este e-mail já está cadastrado. Por favor, faça login.');
+    } else {
+      alert(signUpError.message || 'Erro desconhecido no cadastro.');
+    }
+    return;
+  }
+
+  alert('Cadastro realizado com sucesso! Agora faça login.');
+  registerScreen.classList.add('hidden');
+  loginScreen.classList.remove('hidden');
+});
+
+
+
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) return alert(error.message);
+
+            welcomeName.textContent = email.split('@')[0];
+            loginScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>
